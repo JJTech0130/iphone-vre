@@ -1,7 +1,7 @@
 import AppKit
+import Dynamic
 import Foundation
 import Virtualization
-import VPhoneObjC
 
 // MARK: - Touch-enabled VZVirtualMachineView
 
@@ -21,17 +21,16 @@ class VPhoneVMView: VZVirtualMachineView {
 
     private func handleMouseDragged(_ event: NSEvent) {
         guard let vm = self.virtualMachine,
-              let devices = VPhoneGetMultiTouchDevices(vm),
+              let devices = multiTouchDevices(vm),
               devices.count > 0 else { return }
 
         let normalized = normalizeCoordinate(event.locationInWindow)
         let swipeAim = self.currentTouchSwipeAim
 
-        guard let touch = VPhoneCreateTouch(0, 1, normalized.point, Int(swipeAim), event.timestamp) else { return }
-        guard let touchEvent = VPhoneCreateMultiTouchEvent([touch]) else { return }
+        guard let touch = makeTouch(0, 1, normalized.point, Int(swipeAim), event.timestamp) else { return }
+        guard let touchEvent = makeMultiTouchEvent([touch]) else { return }
 
-        let device = devices[0]
-        VPhoneSendMultiTouchEvents(device, [touchEvent])
+        sendMultiTouchEvents(devices[0], [touchEvent])
     }
 
     // 2. Mouse down -> touch phase 0 (began)
@@ -42,7 +41,7 @@ class VPhoneVMView: VZVirtualMachineView {
 
     private func handleMouseDown(_ event: NSEvent) {
         guard let vm = self.virtualMachine,
-              let devices = VPhoneGetMultiTouchDevices(vm),
+              let devices = multiTouchDevices(vm),
               devices.count > 0 else { return }
 
         let normalized = normalizeCoordinate(event.locationInWindow)
@@ -50,11 +49,10 @@ class VPhoneVMView: VZVirtualMachineView {
         let edgeResult = hitTestEdge(at: localPoint)
         self.currentTouchSwipeAim = Int64(edgeResult)
 
-        guard let touch = VPhoneCreateTouch(0, 0, normalized.point, edgeResult, event.timestamp) else { return }
-        guard let touchEvent = VPhoneCreateMultiTouchEvent([touch]) else { return }
+        guard let touch = makeTouch(0, 0, normalized.point, edgeResult, event.timestamp) else { return }
+        guard let touchEvent = makeMultiTouchEvent([touch]) else { return }
 
-        let device = devices[0]
-        VPhoneSendMultiTouchEvents(device, [touchEvent])
+        sendMultiTouchEvents(devices[0], [touchEvent])
     }
 
     // 3. Right mouse down -> two-finger touch began
@@ -65,7 +63,7 @@ class VPhoneVMView: VZVirtualMachineView {
 
     private func handleRightMouseDown(_ event: NSEvent) {
         guard let vm = self.virtualMachine,
-              let devices = VPhoneGetMultiTouchDevices(vm),
+              let devices = multiTouchDevices(vm),
               devices.count > 0 else { return }
 
         let normalized = normalizeCoordinate(event.locationInWindow)
@@ -75,12 +73,11 @@ class VPhoneVMView: VZVirtualMachineView {
         let edgeResult = hitTestEdge(at: localPoint)
         self.currentTouchSwipeAim = Int64(edgeResult)
 
-        guard let touch = VPhoneCreateTouch(0, 0, normalized.point, edgeResult, event.timestamp),
-              let touch2 = VPhoneCreateTouch(1, 0, normalized.point, edgeResult, event.timestamp) else { return }
-        guard let touchEvent = VPhoneCreateMultiTouchEvent([touch, touch2]) else { return }
+        guard let touch = makeTouch(0, 0, normalized.point, edgeResult, event.timestamp),
+              let touch2 = makeTouch(1, 0, normalized.point, edgeResult, event.timestamp) else { return }
+        guard let touchEvent = makeMultiTouchEvent([touch, touch2]) else { return }
 
-        let device = devices[0]
-        VPhoneSendMultiTouchEvents(device, [touchEvent])
+        sendMultiTouchEvents(devices[0], [touchEvent])
     }
 
     // 4. Mouse up -> touch phase 3 (ended)
@@ -91,17 +88,16 @@ class VPhoneVMView: VZVirtualMachineView {
 
     private func handleMouseUp(_ event: NSEvent) {
         guard let vm = self.virtualMachine,
-              let devices = VPhoneGetMultiTouchDevices(vm),
+              let devices = multiTouchDevices(vm),
               devices.count > 0 else { return }
 
         let normalized = normalizeCoordinate(event.locationInWindow)
         let swipeAim = self.currentTouchSwipeAim
 
-        guard let touch = VPhoneCreateTouch(0, 3, normalized.point, Int(swipeAim), event.timestamp) else { return }
-        guard let touchEvent = VPhoneCreateMultiTouchEvent([touch]) else { return }
+        guard let touch = makeTouch(0, 3, normalized.point, Int(swipeAim), event.timestamp) else { return }
+        guard let touchEvent = makeMultiTouchEvent([touch]) else { return }
 
-        let device = devices[0]
-        VPhoneSendMultiTouchEvents(device, [touchEvent])
+        sendMultiTouchEvents(devices[0], [touchEvent])
     }
 
     // 5. Right mouse up -> two-finger touch ended
@@ -112,7 +108,7 @@ class VPhoneVMView: VZVirtualMachineView {
 
     private func handleRightMouseUp(_ event: NSEvent) {
         guard let vm = self.virtualMachine,
-              let devices = VPhoneGetMultiTouchDevices(vm),
+              let devices = multiTouchDevices(vm),
               devices.count > 0 else { return }
 
         let normalized = normalizeCoordinate(event.locationInWindow)
@@ -120,12 +116,11 @@ class VPhoneVMView: VZVirtualMachineView {
 
         let swipeAim = self.currentTouchSwipeAim
 
-        guard let touch = VPhoneCreateTouch(0, 3, normalized.point, Int(swipeAim), event.timestamp),
-              let touch2 = VPhoneCreateTouch(1, 3, normalized.point, Int(swipeAim), event.timestamp) else { return }
-        guard let touchEvent = VPhoneCreateMultiTouchEvent([touch, touch2]) else { return }
+        guard let touch = makeTouch(0, 3, normalized.point, Int(swipeAim), event.timestamp),
+              let touch2 = makeTouch(1, 3, normalized.point, Int(swipeAim), event.timestamp) else { return }
+        guard let touchEvent = makeMultiTouchEvent([touch, touch2]) else { return }
 
-        let device = devices[0]
-        VPhoneSendMultiTouchEvents(device, [touchEvent])
+        sendMultiTouchEvents(devices[0], [touchEvent])
     }
 
     // MARK: - Coordinate normalization
@@ -242,4 +237,35 @@ class VPhoneWindowController {
             self.windowController = nil
         }
     }
+}
+
+// MARK: - Private multi-touch helpers
+
+/// Returns the `_multiTouchDevices` array from a running VZVirtualMachine.
+private func multiTouchDevices(_ vm: VZVirtualMachine) -> [AnyObject]? {
+    return Dynamic(vm)._multiTouchDevices.asArray as? [AnyObject]
+}
+
+/// Creates a _VZTouch via alloc+init + KVC (avoids crash in the designated initializer).
+private func makeTouch(_ index: Int, _ phase: Int, _ location: CGPoint,
+                       _ swipeAim: Int, _ timestamp: TimeInterval) -> AnyObject?
+{
+    guard let cls = NSClassFromString("_VZTouch") as? NSObject.Type else { return nil }
+    let touch = cls.init()
+    touch.setValue(NSNumber(value: UInt8(clamping: index)), forKey: "_index")
+    touch.setValue(NSNumber(value: phase),                  forKey: "_phase")
+    touch.setValue(NSNumber(value: swipeAim),               forKey: "_swipeAim")
+    touch.setValue(NSNumber(value: timestamp),              forKey: "_timestamp")
+    touch.setValue(NSValue(point: location),                forKey: "_location")
+    return touch
+}
+
+/// Creates a _VZMultiTouchEvent from an array of _VZTouch objects.
+private func makeMultiTouchEvent(_ touches: [AnyObject]) -> AnyObject? {
+    return Dynamic._VZMultiTouchEvent(touches: touches).asObject
+}
+
+/// Sends multi-touch events to a device via `sendMultiTouchEvents:`.
+private func sendMultiTouchEvents(_ device: AnyObject, _ events: [AnyObject]) {
+    Dynamic(device).sendMultiTouchEvents(events)
 }

@@ -1,6 +1,6 @@
+import Dynamic
 import Foundation
 import Virtualization
-import VPhoneObjC
 
 /// Minimal VM for booting a vphone (virtual iPhone) in DFU mode.
 class VPhoneVM: NSObject, VZVirtualMachineDelegate {
@@ -26,7 +26,15 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate {
 
     init(options: Options) throws {
         // --- Hardware model (PV=3) ---
-        let hwModel = try VPhoneHardware.createModel()
+        // platformVersion=3, boardID=0x90, ISA=2 matches vrevm vresearch101
+        let desc = Dynamic._VZMacHardwareModelDescriptor()
+        desc.setPlatformVersion(NSNumber(value: UInt32(3)))
+        desc.setBoardID(NSNumber(value: UInt32(0x90)))
+        desc.setISA(NSNumber(value: Int64(2)))
+        let hwModel = Dynamic.VZMacHardwareModel
+            ._hardwareModelWithDescriptor(desc.asObject)
+            .asObject as! VZMacHardwareModel
+        guard hwModel.isSupported else { throw VPhoneError.hardwareModelNotSupported }
         print("[vphone] PV=3 hardware model: isSupported = true")
 
         // --- Platform ---
@@ -53,19 +61,19 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate {
         )
         platform.auxiliaryStorage = auxStorage
         platform.hardwareModel = hwModel
-        // platformFusing = prod (same as vrevm config)
 
         // Set NVRAM boot-args to enable serial output (same as vrevm restore)
         let bootArgs = "serial=3 debug=0x104c04"
         if let bootArgsData = bootArgs.data(using: .utf8) {
-            if VPhoneSetNVRAMVariable(auxStorage, "boot-args", bootArgsData) {
-                print("[vphone] NVRAM boot-args: \(bootArgs)")
-            }
+            let ok = Dynamic(auxStorage)
+                ._setDataValue(bootArgsData, forNVRAMVariableNamed: "boot-args", error: nil)
+                .asBool ?? false
+            if ok { print("[vphone] NVRAM boot-args: \(bootArgs)") }
         }
 
         // --- Boot loader with custom ROM ---
         let bootloader = VZMacOSBootLoader()
-        VPhoneSetBootLoaderROMURL(bootloader, options.romURL)
+        Dynamic(bootloader)._setROMURL(options.romURL)
 
         // --- VM Configuration ---
         let config = VZVirtualMachineConfiguration()
@@ -93,44 +101,44 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate {
         config.networkDevices = [net]
 
         // Serial port (PL011 UART — always configured)
-        // Connect host stdin/stdout directly for interactive serial console
-        do {
-            if let serialPort = VPhoneCreatePL011SerialPort() {
-                serialPort.attachment = VZFileHandleSerialPortAttachment(
-                    fileHandleForReading: FileHandle.standardInput,
-                    fileHandleForWriting: FileHandle.standardOutput
-                )
-                config.serialPorts = [serialPort]
-                print("[vphone] PL011 serial port attached (interactive)")
-            }
+        if let serialPort = Dynamic._VZPL011SerialPortConfiguration().asObject as? VZSerialPortConfiguration {
+            serialPort.attachment = VZFileHandleSerialPortAttachment(
+                fileHandleForReading: FileHandle.standardInput,
+                fileHandleForWriting: FileHandle.standardOutput
+            )
+            config.serialPorts = [serialPort]
+            print("[vphone] PL011 serial port attached (interactive)")
+        }
 
-            // Set up log file if requested
-            if let logPath = options.serialLogPath {
-                let logURL = URL(fileURLWithPath: logPath)
-                FileManager.default.createFile(atPath: logURL.path, contents: nil)
-                self.consoleLogFileHandle = FileHandle(forWritingAtPath: logURL.path)
-                print("[vphone] Serial log: \(logPath)")
-            }
+        if let logPath = options.serialLogPath {
+            let logURL = URL(fileURLWithPath: logPath)
+            FileManager.default.createFile(atPath: logURL.path, contents: nil)
+            self.consoleLogFileHandle = FileHandle(forWritingAtPath: logURL.path)
+            print("[vphone] Serial log: \(logPath)")
         }
 
         // Multi-touch (USB touch screen for VNC click support)
-        VPhoneConfigureMultiTouch(config)
+        if let obj = Dynamic._VZUSBTouchScreenConfiguration().asObject {
+            Dynamic(config)._setMultiTouchDevices([obj])
+            print("[vphone] USB touch screen configured")
+        }
 
         // GDB debug stub (default init, system-assigned port — same as vrevm)
-        VPhoneSetGDBDebugStubDefault(config)
+        Dynamic(config)._setDebugStub(Dynamic._VZGDBDebugStubConfiguration().asObject)
 
         // Coprocessors
         if options.skipSEP {
             print("[vphone] SKIP_SEP=1 — no coprocessor")
-        } else if let sepStorageURL = options.sepStorageURL {
-            VPhoneConfigureSEP(config, sepStorageURL, options.sepRomURL)
-            print("[vphone] SEP coprocessor enabled (storage: \(sepStorageURL.path))")
         } else {
-            // Create default SEP storage next to NVRAM
-            let defaultSEPURL = options.nvramURL.deletingLastPathComponent()
-                .appendingPathComponent("sep_storage.bin")
-            VPhoneConfigureSEP(config, defaultSEPURL, options.sepRomURL)
-            print("[vphone] SEP coprocessor enabled (storage: \(defaultSEPURL.path))")
+            let sepURL = options.sepStorageURL
+                ?? options.nvramURL.deletingLastPathComponent().appendingPathComponent("sep_storage.bin")
+            let sepConfig = Dynamic._VZSEPCoprocessorConfiguration(storageURL: sepURL)
+            if let romURL = options.sepRomURL { sepConfig.setRomBinaryURL(romURL) }
+            sepConfig.setDebugStub(Dynamic._VZGDBDebugStubConfiguration().asObject)
+            if let sepObj = sepConfig.asObject {
+                Dynamic(config)._setCoprocessors([sepObj])
+                print("[vphone] SEP coprocessor enabled (storage: \(sepURL.path))")
+            }
         }
 
         // Validate
@@ -147,7 +155,9 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate {
     @MainActor
     func start(forceDFU: Bool, stopOnPanic: Bool, stopOnFatalError: Bool) async throws {
         let opts = VZMacOSVirtualMachineStartOptions()
-        VPhoneConfigureStartOptions(opts, forceDFU, stopOnPanic, stopOnFatalError)
+        Dynamic(opts)._setForceDFU(forceDFU)
+        Dynamic(opts)._setStopInIBootStage1(false)
+        Dynamic(opts)._setStopInIBootStage2(false)
         print("[vphone] Starting\(forceDFU ? " DFU" : "")...")
         try await virtualMachine.start(options: opts)
         if forceDFU {
