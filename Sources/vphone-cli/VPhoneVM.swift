@@ -5,7 +5,8 @@ import VPhoneObjC
 /// Minimal VM for booting a vphone (virtual iPhone) in DFU mode.
 class VPhoneVM: NSObject, VZVirtualMachineDelegate {
     let virtualMachine: VZVirtualMachine
-    private var done = false
+    /// Called on the main queue when the guest stops (normally or with an error).
+    var onStop: (() -> Void)?
 
     struct Options {
         var romURL: URL
@@ -156,24 +157,16 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate {
         }
     }
 
-    // MARK: - Wait
-
-    func waitUntilStopped() async {
-        while !done {
-            try? await Task.sleep(nanoseconds: 500_000_000)
-        }
-    }
-
     // MARK: - Delegate
 
     func guestDidStop(_: VZVirtualMachine) {
         print("[vphone] Guest stopped")
-        done = true
+        DispatchQueue.main.async { self.onStop?() }
     }
 
     func virtualMachine(_: VZVirtualMachine, didStopWithError error: Error) {
         print("[vphone] Stopped with error: \(error)")
-        done = true
+        DispatchQueue.main.async { self.onStop?() }
     }
 
     func virtualMachine(_: VZVirtualMachine, networkDevice _: VZNetworkDevice,

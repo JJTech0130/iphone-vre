@@ -16,4 +16,3 @@ cd "$(dirname "$0")"
     --stop-on-fatal-error \
     --sep-rom ./VM/AVPSEPBooter.vresearch1.bin \
     --sep-storage ./VM/SEPStorage \
-    --no-graphics

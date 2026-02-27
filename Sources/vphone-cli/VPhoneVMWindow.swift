@@ -232,10 +232,6 @@ class VPhoneWindowController {
         controller.showWindow(nil)
         self.windowController = controller
 
-        if NSApp == nil {
-            _ = NSApplication.shared
-        }
-        NSApp.setActivationPolicy(.regular)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
