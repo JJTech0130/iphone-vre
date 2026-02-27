@@ -508,6 +508,14 @@ Then
 
 \
 
+## Restore Modified Firmware to VM
+
+After patching, we can use `idevicerestore` to restore the modified firmware to the virtual machine.
+
+```
+idevicerestore -e -y ./iPhone17,3_26.1_23B85_Restore
+```
+
 ## Fix Boot
 
 After flashing the firmware, a series of modifications are still required to boot vphone.
