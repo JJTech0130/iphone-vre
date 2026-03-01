@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "vphone-cli",
+    name: "VPhone",
     platforms: [
         .macOS(.v14),
     ],
@@ -13,7 +13,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "vphone-cli",
+            name: "vphone",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Dynamic", package: "Dynamic"),
