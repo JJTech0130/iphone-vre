@@ -56,25 +56,18 @@ class VPhoneAppDelegate: NSObject, NSApplicationDelegate {
         let sepStorageURL = URL(fileURLWithPath: cli.sepStorage)
         let sepRomURL = cli.sepRom.map { URL(fileURLWithPath: $0) }
 
-        print("SEP   : \(cli.skipSep ? "skipped" : "enabled")")
-        if !cli.skipSep {
-            print("  storage: \(cli.sepStorage)")
-            if let r = cli.sepRom { print("  rom    : \(r)") }
-        }
-        print("")
-
         let options = VPhoneVM.Options(
             romURL: romURL,
             nvramURL: nvramURL,
             diskURL: diskURL,
             cpuCount: cli.cpu,
             memorySize: UInt64(cli.memory) * 1024 * 1024,
-            skipSEP: cli.skipSep,
             sepStorageURL: sepStorageURL,
             sepRomURL: sepRomURL,
             serialLogPath: cli.serialLog,
             stopOnPanic: cli.stopOnPanic,
-            stopOnFatalError: cli.stopOnFatalError
+            stopOnFatalError: cli.stopOnFatalError,
+            keyboardEnabled: !cli.noKeyboard
         )
 
         let vm = try VPhoneVM(options: options)

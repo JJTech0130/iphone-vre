@@ -14,12 +14,12 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate {
         var diskURL: URL
         var cpuCount: Int = 4
         var memorySize: UInt64 = 4 * 1024 * 1024 * 1024
-        var skipSEP: Bool = true
         var sepStorageURL: URL?
         var sepRomURL: URL?
         var serialLogPath: String? = nil
         var stopOnPanic: Bool = false
         var stopOnFatalError: Bool = false
+        var keyboardEnabled: Bool = true
     }
 
     private var consoleLogFileHandle: FileHandle?
@@ -138,12 +138,14 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate {
         }
 
         // Keyboard
-        config.keyboards = [VZUSBKeyboardConfiguration()]
+        if options.keyboardEnabled {
+            config.keyboards = [VZUSBKeyboardConfiguration()]
+        }
 
         // GDB debug stub
         Dynamic(config)._setDebugStub(Dynamic._VZGDBDebugStubConfiguration().asObject)
 
-        // Coprocessors
+        // Coprocessors (SEP)
         let sepURL = options.sepStorageURL
         let sepConfig = Dynamic._VZSEPCoprocessorConfiguration(storageURL: sepURL)
         if let romURL = options.sepRomURL { sepConfig.setRomBinaryURL(romURL) }

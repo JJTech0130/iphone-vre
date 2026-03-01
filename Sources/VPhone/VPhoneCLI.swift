@@ -31,9 +31,6 @@ struct VPhoneCLI: ParsableCommand {
     @Flag(help: "Stop VM on fatal error")
     var stopOnFatalError: Bool = false
 
-    @Flag(help: "Skip SEP coprocessor setup")
-    var skipSep: Bool = false
-
     @Option(help: "Path to SEP storage file (created if missing)")
     var sepStorage: String = "sep_storage.bin"
 
@@ -45,6 +42,9 @@ struct VPhoneCLI: ParsableCommand {
 
     @Flag(help: "Run without GUI (headless)")
     var noGraphics: Bool = false
+
+    @Flag(help: "No keyboard")
+    var noKeyboard: Bool = false
 
     // Execution is handled by VPhoneAppDelegate; main.swift calls parseOrExit()
     // and never invokes run().

@@ -57,7 +57,7 @@ lldb_py = subprocess.run(
 if lldb_py:
     sys.path.append(lldb_py.strip())
 
-import lldb
+import lldb # type: ignore
 
 
 def handle_validate(*, target, thread, args) -> bool:
