@@ -35,7 +35,7 @@ struct VPhoneCLI: ParsableCommand {
     var skipSep: Bool = false
 
     @Option(help: "Path to SEP storage file (created if missing)")
-    var sepStorage: String? = nil
+    var sepStorage: String = "sep_storage.bin"
 
     @Option(help: "Path to SEP ROM binary")
     var sepRom: String? = nil

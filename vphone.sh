@@ -9,7 +9,7 @@ BINARY="${SCRIPT_DIR}/.build/release/vphone"
 # resolve symlinks in $BINARY
 BINARY="$(readlink -f "$BINARY")"
 echo "Building vphone binary at $BINARY..."
-"$SCRIPT_DIR/scripts/build.sh"
+"$SCRIPT_DIR/build.sh"
 
 # prompt for sudo password
 sudo -v

@@ -53,12 +53,12 @@ class VPhoneAppDelegate: NSObject, NSApplicationDelegate {
         print("CPU   : \(cli.cpu)")
         print("Memory: \(cli.memory) MB")
 
-        let sepStorageURL = cli.sepStorage.map { URL(fileURLWithPath: $0) }
+        let sepStorageURL = URL(fileURLWithPath: cli.sepStorage)
         let sepRomURL = cli.sepRom.map { URL(fileURLWithPath: $0) }
 
         print("SEP   : \(cli.skipSep ? "skipped" : "enabled")")
         if !cli.skipSep {
-            print("  storage: \(cli.sepStorage ?? "(auto)")")
+            print("  storage: \(cli.sepStorage)")
             if let r = cli.sepRom { print("  rom    : \(r)") }
         }
         print("")
