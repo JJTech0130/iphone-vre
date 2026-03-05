@@ -29,7 +29,7 @@ private let kMsgValid: UInt32 = (1 << 15)
 // MARK: - FakeHIDKeyboard
 
 /// Manages a synthetic USB 2.0 full-speed HID keyboard via IOUSBHostControllerInterface.
-public final class FakeHIDKeyboard: NSObject, @unchecked Sendable {
+public final class FakeHIDKeyboard: NSObject {
 
     // MARK: - Properties
 
@@ -60,17 +60,20 @@ public final class FakeHIDKeyboard: NSObject, @unchecked Sendable {
     public override init() { super.init() }
 
     public func start() throws {
-        let caps = buildCapabilities()
         var initErr: NSError?
         let ci = IOUSBHostControllerInterface(
-            __capabilities: caps,
-            queue: nil,
-            interruptRateHz: 0,
+            __capabilities: buildCapabilities(), // capabilities of this controller
+            queue: nil, // use a default background queue for controller callbacks
+            interruptRateHz: 0, // deliver all interrupts to the kernel immediately
             error: &initErr,
+            // kernel driver sends commands like power on, reset, etc; we respond to those in the command handler callback
             commandHandler: { [weak self] ci, cmd in self?.handleCommand(ci, cmd) },
+            // kernel driver sends doorbell messages to notify the us that transfer structures have been updated;
+            //   we then loop through all pending transfers and handle them
             doorbellHandler: { [weak self] ci, doorbells, count in
                 self?.handleDoorbells(ci, doorbells, count)
             },
+            // used to process service state changes such as termination; we don't need that
             interestHandler: nil)
 
         if let e = initErr, e.code != 0 { throw e }
