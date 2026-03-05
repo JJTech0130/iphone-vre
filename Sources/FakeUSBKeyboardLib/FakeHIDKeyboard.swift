@@ -29,7 +29,7 @@ private let kMsgValid: UInt32 = (1 << 15)
 // MARK: - FakeHIDKeyboard
 
 /// Manages a synthetic USB 2.0 full-speed HID keyboard via IOUSBHostControllerInterface.
-final class FakeHIDKeyboard: NSObject, @unchecked Sendable {
+public final class FakeHIDKeyboard: NSObject, @unchecked Sendable {
 
     // MARK: - Properties
 
@@ -57,7 +57,9 @@ final class FakeHIDKeyboard: NSObject, @unchecked Sendable {
 
     // MARK: - Start / Stop
 
-    func start() throws {
+    public override init() { super.init() }
+
+    public func start() throws {
         let caps = buildCapabilities()
         var initErr: NSError?
         let ci = IOUSBHostControllerInterface(
@@ -80,7 +82,7 @@ final class FakeHIDKeyboard: NSObject, @unchecked Sendable {
         print("[FakeHIDKeyboard] Controller created — UUID: \(ci.uuid.uuidString)")
     }
 
-    func stop() {
+    public func stop() {
         frameTimer?.cancel()
         frameTimer = nil
         controller?.destroy()
@@ -91,7 +93,7 @@ final class FakeHIDKeyboard: NSObject, @unchecked Sendable {
     // MARK: - Key injection
 
     /// Press and release a single key (blocks ~70ms).
-    func typeKey(_ keycode: HIDKeycode, modifiers: UInt8 = 0) {
+    public func typeKey(_ keycode: HIDKeycode, modifiers: UInt8 = 0) {
         var report = HIDKeyboardReport()
         report.modifiers = modifiers
         report.keys.0 = keycode.rawValue

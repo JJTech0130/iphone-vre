@@ -67,7 +67,8 @@ class VPhoneAppDelegate: NSObject, NSApplicationDelegate {
             serialLogPath: cli.serialLog,
             stopOnPanic: cli.stopOnPanic,
             stopOnFatalError: cli.stopOnFatalError,
-            keyboardEnabled: !cli.noKeyboard
+            keyboardEnabled: !cli.noKeyboard,
+            fakeUSBKeyboard: cli.fakeUSBKeyboard
         )
 
         let vm = try VPhoneVM(options: options)

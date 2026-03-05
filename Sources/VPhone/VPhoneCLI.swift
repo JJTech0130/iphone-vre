@@ -46,6 +46,9 @@ struct VPhoneCLI: ParsableCommand {
     @Flag(help: "No keyboard")
     var noKeyboard: Bool = false
 
+    @Flag(help: "Start a fake USB HID keyboard via IOUSBHostControllerInterface")
+    var fakeUSBKeyboard: Bool = false
+
     // Execution is handled by VPhoneAppDelegate; main.swift calls parseOrExit()
     // and never invokes run().
     mutating func run() throws {}

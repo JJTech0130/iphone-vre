@@ -9,6 +9,7 @@
 //   fake-usb-keyboard            – start the virtual keyboard, type keys from stdin
 //   fake-usb-keyboard --demo     – type a short demo string then exit
 
+import FakeUSBKeyboardLib
 import Foundation
 
 // Simple arg parsing

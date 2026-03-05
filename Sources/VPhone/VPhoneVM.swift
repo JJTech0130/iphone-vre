@@ -1,4 +1,5 @@
 import Dynamic
+import FakeUSBKeyboardLib
 import Foundation
 import Virtualization
 
@@ -20,9 +21,11 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
         var stopOnPanic: Bool = false
         var stopOnFatalError: Bool = false
         var keyboardEnabled: Bool = true
+        var fakeUSBKeyboard: Bool = false
     }
 
     private var consoleLogFileHandle: FileHandle?
+    var fakeKeyboard: FakeHIDKeyboard?
 
     @MainActor
     init(options: Options) throws {
@@ -187,6 +190,12 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
         virtualMachine = VZVirtualMachine(configuration: config)
         super.init()
         virtualMachine.delegate = self
+
+        if options.fakeUSBKeyboard {
+            let kbd = FakeHIDKeyboard()
+            try kbd.start()
+            fakeKeyboard = kbd
+        }
     }
 
     // MARK: - DFU start
@@ -203,6 +212,10 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
             print("[vphone] VM started in DFU mode — connect with irecovery")
         } else {
             print("[vphone] VM started — booting normally")
+        }
+
+        if fakeKeyboard != nil {
+            await attachFakeKeyboardToGuest()
         }
     }
 
@@ -228,6 +241,8 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
 
     func stopConsoleCapture() {
         consoleLogFileHandle?.closeFile()
+        fakeKeyboard?.stop()
+        fakeKeyboard = nil
     }
 }
 

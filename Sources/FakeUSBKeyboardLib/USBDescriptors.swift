@@ -133,7 +133,7 @@ let usbStringProduct      = usbStringDescriptor(for: "Virtual HID Keyboard")
 
 // MARK: - HID Keyboard Keycodes (USB HID usage table, page 0x07)
 
-enum HIDKeycode: UInt8 {
+public enum HIDKeycode: UInt8 {
     case none = 0x00
     case a = 0x04, b, c, d, e, f, g, h, i, j, k, l, m
     case n, o, p, q, r, s, t, u, v, w, x, y, z
@@ -151,7 +151,7 @@ enum HIDKeycode: UInt8 {
     case right = 0x4F
 }
 
-enum HIDModifier: UInt8 {
+public enum HIDModifier: UInt8 {
     case leftControl  = 0x01
     case leftShift    = 0x02
     case leftAlt      = 0x04
@@ -163,14 +163,16 @@ enum HIDModifier: UInt8 {
 }
 
 /// An 8-byte HID keyboard report.
-struct HIDKeyboardReport {
-    var modifiers: UInt8 = 0
-    var reserved: UInt8  = 0
-    var keys: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8) = (0, 0, 0, 0, 0, 0)
+public struct HIDKeyboardReport: Sendable {
+    public var modifiers: UInt8 = 0
+    public var reserved: UInt8  = 0
+    public var keys: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8) = (0, 0, 0, 0, 0, 0)
 
-    static let empty = HIDKeyboardReport()
+    public init() {}
 
-    var bytes: [UInt8] {
+    public static let empty = HIDKeyboardReport()
+
+    public var bytes: [UInt8] {
         [modifiers, reserved,
          keys.0, keys.1, keys.2, keys.3, keys.4, keys.5]
     }
