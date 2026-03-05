@@ -120,10 +120,10 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
 
         // Serial port (PL011 UART — always configured)
         if let serialPort = Dynamic._VZPL011SerialPortConfiguration().asObject as? VZSerialPortConfiguration {
-            serialPort.attachment = VZFileHandleSerialPortAttachment(
-                fileHandleForReading: FileHandle.standardInput,
-                fileHandleForWriting: FileHandle.standardOutput
-            )
+            // serialPort.attachment = VZFileHandleSerialPortAttachment(
+            //     fileHandleForReading: FileHandle.standardInput,
+            //     fileHandleForWriting: FileHandle.standardOutput
+            // )
         
             config.serialPorts = [serialPort]
         }
@@ -193,7 +193,9 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
 
         if options.fakeUSBKeyboard {
             let kbd = FakeHIDKeyboard()
-            try kbd.start()
+            //try kbd.start()
+            print("[vphone] Started fake USB keyboard with vendor=0x\(String(format: "%04x", kFakeKeyboardVendorID)) " +
+                  "product=0x\(String(format: "%04x", kFakeKeyboardProductID))")
             fakeKeyboard = kbd
         }
     }
@@ -215,6 +217,8 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
         }
 
         if fakeKeyboard != nil {
+            print("[vphone] Attaching fake USB keyboard to guest...")
+            try fakeKeyboard!.start()
             await attachFakeKeyboardToGuest()
         }
     }

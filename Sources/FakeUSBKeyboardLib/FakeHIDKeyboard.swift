@@ -161,7 +161,7 @@ public final class FakeHIDKeyboard: NSObject {
                  IOUSBHostCIMessageTypeControllerPause:
                 try ci.controllerStateMachine.respond(toCommand: &cmd, status: IOUSBHostCIMessageStatusSuccess)
                 if msgType == IOUSBHostCIMessageTypeControllerStart {
-                    startFrameTimer()
+                    //startFrameTimer()
                 }
 
             case IOUSBHostCIMessageTypeControllerFrameNumber:
@@ -411,12 +411,16 @@ public final class FakeHIDKeyboard: NSObject {
 
     private func startFrameTimer() {
         let timer = DispatchSource.makeTimerSource(queue: .main)
+        // 1000Hz = 1ms
         timer.schedule(deadline: .now() + 0.001, repeating: 0.001)
         timer.setEventHandler { [weak self] in
             guard let self, let ci = self.controller else { return }
             self.frameNumber += 1
-            try? ci.controllerStateMachine.enqueueUpdatedFrame(
-                self.frameNumber, timestamp: mach_absolute_time())
+            // do { try ci.controllerStateMachine.enqueueUpdatedFrame(
+            //     self.frameNumber, timestamp: mach_absolute_time())
+            // } catch {
+            //     print("[FakeHIDKeyboard] Failed to enqueue frame update: \(error)")
+            // }
         }
         timer.resume()
         frameTimer = timer

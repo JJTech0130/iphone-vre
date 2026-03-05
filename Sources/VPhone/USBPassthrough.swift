@@ -5,8 +5,10 @@ import IOKit
 import ObjectiveC.runtime
 import Virtualization
 
-private let kFakeKeyboardVendorID  = 0x05AC
-private let kFakeKeyboardProductID = 0x0001
+// let kFakeKeyboardVendorID  = 0x05AC
+// let kFakeKeyboardProductID = 0x0001
+let kFakeKeyboardVendorID = 0x1050
+let kFakeKeyboardProductID = 0x0407
 
 // Typed objc_msgSend wrappers obtained via dlsym to bypass Swift's
 // "variadic function unavailable" restriction on the overlay symbol.
@@ -44,16 +46,18 @@ extension VPhoneVM {
         print("[vphone] USB passthrough: waiting for fake keyboard IOKit service…")
         guard let service = await pollForUSBService(vendor: kFakeKeyboardVendorID,
                                                     product: kFakeKeyboardProductID) else {
-            print("[vphone] USB passthrough: timed out waiting for fake keyboard IOKit service")
+            print("[vphone] USB passthrough: timed out — dumping all USB devices in IOKit:")
+            //dumpUSBDevices()
             return
         }
         defer { IOObjectRelease(service) }
         print(String(format: "[vphone] USB passthrough: found service 0x%x", service))
 
         // Authorize for capture
-        let kr = IOServiceAuthorize(service, IOOptionBits(kIOServiceInteractionAllowed))
+        let kr = IOServiceAuthorize(service, IOOptionBits(kPrompt))
         if kr != kIOReturnSuccess {
-            print(String(format: "[vphone] IOServiceAuthorize failed: 0x%08x", kr))
+            let errStr = String(cString: mach_error_string(kr))
+            print(String(format: "[vphone] IOServiceAuthorize failed: 0x%x (%@)", kr, errStr))
         }
 
         // _VZIOUSBHostPassthroughDeviceConfiguration
@@ -116,10 +120,37 @@ extension VPhoneVM {
     }
 
     private func lookupUSBService(vendor: Int, product: Int) -> io_service_t? {
-        let matching = IOServiceMatching("IOUSBHostDevice") as NSMutableDictionary
-        matching["idVendor"]  = vendor
-        matching["idProduct"] = product
-        let svc = IOServiceGetMatchingService(kIOMainPortDefault, matching)
-        return svc != IO_OBJECT_NULL ? svc : nil
+        // Try both new and old IOKit USB class names
+        for className in ["IOUSBHostDevice"] {
+            let matching = IOServiceMatching(className) as NSMutableDictionary
+            matching["idVendor"]  = vendor
+            matching["idProduct"] = product
+            let svc = IOServiceGetMatchingService(kIOMainPortDefault, matching)
+            if svc != IO_OBJECT_NULL {
+                print("[vphone] lookupUSBService: found via class '\(className)'")
+                return svc
+            }
+        }
+        return nil
+    }
+
+    /// Dump all IOUSBHostDevice / IOUSBDevice entries to help diagnose matching failures.
+    func dumpUSBDevices() {
+        for className in ["IOUSBHostDevice", "IOUSBDevice"] {
+            var iter: io_iterator_t = 0
+            guard IOServiceGetMatchingServices(kIOMainPortDefault,
+                                              IOServiceMatching(className), &iter) == kIOReturnSuccess
+            else { continue }
+            defer { IOObjectRelease(iter) }
+            var svc = IOIteratorNext(iter)
+            while svc != IO_OBJECT_NULL {
+                let vid  = IORegistryEntryCreateCFProperty(svc, "idVendor"         as CFString, kCFAllocatorDefault, 0).map { "\($0)" } ?? "?"
+                let pid  = IORegistryEntryCreateCFProperty(svc, "idProduct"        as CFString, kCFAllocatorDefault, 0).map { "\($0)" } ?? "?"
+                let name = IORegistryEntryCreateCFProperty(svc, "USB Product Name" as CFString, kCFAllocatorDefault, 0).map { "\($0)" } ?? "?"
+                print("[vphone] \(className): vendor=\(vid) product=\(pid) name=\(name)")
+                IOObjectRelease(svc)
+                svc = IOIteratorNext(iter)
+            }
+        }
     }
 }

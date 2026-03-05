@@ -87,7 +87,7 @@ class VPhoneAppDelegate: NSObject, NSApplicationDelegate {
 
         if !cli.noGraphics {
             let wc = VPhoneWindowController()
-            wc.showWindow(for: vm.virtualMachine)
+            wc.showWindow(for: vm.virtualMachine, keyboard: vm.fakeKeyboard)
             windowController = wc
         }
     }

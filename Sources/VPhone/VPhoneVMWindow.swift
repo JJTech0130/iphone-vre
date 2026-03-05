@@ -1,5 +1,6 @@
 import AppKit
 import Dynamic
+import FakeUSBKeyboardLib
 import Foundation
 import Virtualization
 
@@ -187,13 +188,25 @@ class VPhoneVMView: VZVirtualMachineView {
     }
 }
 
+// MARK: - Button action helper
+
+/// Wraps a closure as an NSObject target so it can be used with #selector.
+private final class ActionHandler: NSObject {
+    private let block: () -> Void
+    init(_ block: @escaping () -> Void) { self.block = block }
+    @objc func invoke() { block() }
+}
+
 // MARK: - Window management
 
 class VPhoneWindowController {
     private var windowController: NSWindowController?
+    private var keyboard: FakeHIDKeyboard?
+    private var homeButtonHandler: ActionHandler?
 
     @MainActor
-    func showWindow(for vm: VZVirtualMachine) {
+    func showWindow(for vm: VZVirtualMachine, keyboard: FakeHIDKeyboard? = nil) {
+        self.keyboard = keyboard
         let vmView: NSView
         if #available(macOS 16.0, *) {
             let view = VZVirtualMachineView()
@@ -223,12 +236,33 @@ class VPhoneWindowController {
         window.contentView = vmView
         window.center()
 
+        if keyboard != nil {
+            addHomeButton(to: window)
+        }
+
         let controller = NSWindowController(window: window)
         controller.showWindow(nil)
         self.windowController = controller
 
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @MainActor
+    private func addHomeButton(to window: NSWindow) {
+        let handler = ActionHandler { [weak self] in
+            self?.keyboard?.typeKey(.space, modifiers: 0)
+        }
+        homeButtonHandler = handler
+
+        let button = NSButton(title: "Home", target: handler, action: #selector(ActionHandler.invoke))
+        button.bezelStyle = .rounded
+        button.controlSize = .small
+
+        let accessory = NSTitlebarAccessoryViewController()
+        accessory.view = button
+        accessory.layoutAttribute = .right
+        window.addTitlebarAccessoryViewController(accessory)
     }
 
     @MainActor
