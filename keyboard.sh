@@ -2,12 +2,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BINARY="${SCRIPT_DIR}/.build/debug/fake-usb-keyboard"
+
+# build must happen before readlink
+swift build -c release 2>&1 | tail -5
+
+BINARY="${SCRIPT_DIR}/.build/release/fake-usb-keyboard"
 BINARY="$(readlink -f "$BINARY")"
-echo "Building fake-usb-keyboard binary at $BINARY..."
 ENTITLEMENTS="${SCRIPT_DIR}/keyboard.entitlements"
 
-swift build --target fake-usb-keyboard 2>&1 | tail -5
 codesign --force --sign - --entitlements "${ENTITLEMENTS}" "${BINARY}"
 
 sudo -v

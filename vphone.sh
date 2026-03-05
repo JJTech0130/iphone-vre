@@ -5,11 +5,14 @@ set -euo pipefail
 # rebuilds and hooks amfid
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+swift build -c release 2>&1 | tail -5
 BINARY="${SCRIPT_DIR}/.build/release/vphone"
 # resolve symlinks in $BINARY
 BINARY="$(readlink -f "$BINARY")"
-echo "Building vphone binary at $BINARY..."
-"$SCRIPT_DIR/build.sh"
+ENTITLEMENTS="${SCRIPT_DIR}/vphone.entitlements"
+
+codesign --force --sign - --entitlements "${ENTITLEMENTS}" "${BINARY}"
 
 # prompt for sudo password
 sudo -v
