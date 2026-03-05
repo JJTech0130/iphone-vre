@@ -23,5 +23,13 @@ let package = Package(
                 .linkedFramework("AppKit"),
             ],
         ),
+        .executableTarget(
+            name: "fake-usb-keyboard",
+            path: "Sources/FakeUSBKeyboard",
+            linkerSettings: [
+                .linkedFramework("IOUSBHost"),
+                .linkedFramework("IOKit"),
+            ],
+        ),
     ],
 )
