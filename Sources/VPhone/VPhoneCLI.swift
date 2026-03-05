@@ -2,7 +2,7 @@ import ArgumentParser
 import Foundation
 
 struct VPhoneCLI: ParsableCommand {
-    static var configuration = CommandConfiguration(
+    nonisolated(unsafe) static var configuration = CommandConfiguration(
         commandName: "vphone",
         abstract: "Boot a virtual iPhone",
     )

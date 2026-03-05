@@ -3,8 +3,8 @@ import Foundation
 import Virtualization
 
 /// Minimal VM for booting a vphone (virtual iPhone) in DFU mode.
-class VPhoneVM: NSObject, VZVirtualMachineDelegate {
-    let virtualMachine: VZVirtualMachine
+class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
+    @MainActor let virtualMachine: VZVirtualMachine
     /// Called on the main queue when the guest stops (normally or with an error).
     var onStop: (() -> Void)?
 
@@ -24,6 +24,7 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate {
 
     private var consoleLogFileHandle: FileHandle?
 
+    @MainActor
     init(options: Options) throws {
         // vresearch101
         let desc = Dynamic._VZMacHardwareModelDescriptor()
@@ -131,6 +132,9 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate {
             print("[vphone] Serial log: \(logPath)")
         }
 
+        let controller = VZXHCIControllerConfiguration()
+        config.usbControllers = [controller]
+
         // Multi-touch
         // TODO: figure out the difference between _VZUSBTouchScreenConfiguration and _VZAppleTouchScreenConfiguration
         if let obj = Dynamic._VZUSBTouchScreenConfiguration().asObject {
@@ -139,7 +143,29 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate {
 
         // Keyboard
         if options.keyboardEnabled {
-            config.keyboards = [VZUSBKeyboardConfiguration()]
+            // VZMacKeyboardConfiguration and _VZVirtioKeyboardInputDeviceConfiguration don't seem to work
+            let keyboard = VZUSBKeyboardConfiguration()
+            //Dynamic(keyboard)._setSoftwareKeyboard(true)
+            config.keyboards = [keyboard]
+        }
+
+        // Synthetic battery
+        let source = Dynamic._VZMacSyntheticBatterySource()
+        source.setCharge(100.0)
+        source.setConnectivity(1) // 1=charging, 2=disconnected
+        // _VZMacWallPowerSourceDeviceConfiguration also exists
+        let batteryConfig = Dynamic._VZMacBatteryPowerSourceDeviceConfiguration()
+        batteryConfig.setSource(source.asObject)
+        if let batteryObj = batteryConfig.asObject {
+            Dynamic(config)._setPowerSourceDevices([batteryObj])
+        }
+
+        // Touch ID
+        //+[_VZMacTouchIDDeviceConfiguration _biometricDeviceWithPlatform:]
+        let touchIDConfig = Dynamic._VZMacTouchIDDeviceConfiguration()
+        //touchIDConfig.setPlatform(1) // 1 = iPhone
+        if let touchIDObj = touchIDConfig.asObject {
+            Dynamic(config)._setBiometricDevices([touchIDObj])
         }
 
         // GDB debug stub

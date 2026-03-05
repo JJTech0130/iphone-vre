@@ -231,11 +231,10 @@ class VPhoneWindowController {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    @MainActor
     func close() {
-        DispatchQueue.main.async {
-            self.windowController?.close()
-            self.windowController = nil
-        }
+        windowController?.close()
+        windowController = nil
     }
 }
 
