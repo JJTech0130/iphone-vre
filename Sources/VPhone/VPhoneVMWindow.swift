@@ -251,7 +251,7 @@ class VPhoneWindowController {
     @MainActor
     private func addHomeButton(to window: NSWindow) {
         let handler = ActionHandler { [weak self] in
-            self?.keyboard?.typeKey(.space, modifiers: 0)
+            self?.keyboard?.typeKey(.f7, modifiers: 0)
         }
         homeButtonHandler = handler
 

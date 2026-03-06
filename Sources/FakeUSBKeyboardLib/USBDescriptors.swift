@@ -40,7 +40,7 @@ let hidReportDescriptor: [UInt8] = [
     0x75, 0x08,  //   Report Size (8 bits)
     0x15, 0x00,  //   Logical Minimum (0)
     0x25, 0x65,  //   Logical Maximum (101)
-    0x05, 0x07,  //   Usage Page (Key Codes)
+    0x05, 0x0c,  //   Usage Page (Key Codes)
     0x19, 0x00,  //   Usage Minimum (0)
     0x29, 0x65,  //   Usage Maximum (101)
     0x81, 0x00,  //   Input (Data, Array)
