@@ -28,12 +28,12 @@ extension VPhoneVM {
         defer { IOObjectRelease(service) }
         print(String(format: "[vphone] USB passthrough: found service 0x%x", service))
 
-        // Authorize for capture
-        let kr = IOServiceAuthorize(service, IOOptionBits(kIOServiceInteractionAllowed))
-        if kr != kIOReturnSuccess {
-            let errStr = String(cString: mach_error_string(kr))
-            print(String(format: "[vphone] IOServiceAuthorize failed: 0x%x (%@)", kr, errStr))
-        }
+        // // Authorize for capture
+        // let kr = IOServiceAuthorize(service, IOOptionBits(kIOServiceInteractionAllowed))
+        // if kr != kIOReturnSuccess {
+        //     let errStr = String(cString: mach_error_string(kr))
+        //     print(String(format: "[vphone] IOServiceAuthorize failed: 0x%x (%@)", kr, errStr))
+        // }
 
         // _VZIOUSBHostPassthroughDeviceConfiguration
         var initErr: NSError?
