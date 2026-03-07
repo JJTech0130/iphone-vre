@@ -25,6 +25,5 @@ else
         --stop-on-panic \
         --stop-on-fatal-error \
         --sep-rom ./VM/AVPSEPBooter.vresearch1.bin \
-        --sep-storage ./VM/SEPStorage \
-        --fake-usb-keyboard
+        --sep-storage ./VM/SEPStorage 
 fi

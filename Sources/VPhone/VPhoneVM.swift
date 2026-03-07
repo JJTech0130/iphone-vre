@@ -21,7 +21,6 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
         var stopOnPanic: Bool = false
         var stopOnFatalError: Bool = false
         var keyboardEnabled: Bool = true
-        var fakeUSBKeyboard: Bool = false
     }
 
     private var consoleLogFileHandle: FileHandle?
