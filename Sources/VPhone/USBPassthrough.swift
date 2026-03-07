@@ -5,14 +5,15 @@ import Virtualization
 
 let kFakeKeyboardVendorID  = 0x05AC
 let kFakeKeyboardProductID = 0x0001
-//let kFakeKeyboardVendorID = 0x1050
-//let kFakeKeyboardProductID = 0x0407
 
 extension VPhoneVM {
     /// Waits for the fake keyboard to appear in IOKit, authorizes it,
     /// and passes it through to the guest via private Virtualization API.
     @MainActor
     func attachFakeKeyboardToGuest() async {
+        // Patch buggy VZIOUSBHostPassthroughDevice behavior on Sequoia
+        VZSequoiaSwizzle.install()
+        
         guard let controller = virtualMachine.usbControllers.first else {
             print("[vphone] USB passthrough: no USB controller configured")
             return
