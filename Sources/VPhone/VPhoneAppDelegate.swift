@@ -67,7 +67,7 @@ class VPhoneAppDelegate: NSObject, NSApplicationDelegate {
             serialLogPath: cli.serialLog,
             stopOnPanic: cli.stopOnPanic,
             stopOnFatalError: cli.stopOnFatalError,
-            keyboardEnabled: !cli.noKeyboard
+            keyboardEnabled: !cli.noKeyboard,
         )
 
         let vm = try VPhoneVM(options: options)
@@ -86,7 +86,7 @@ class VPhoneAppDelegate: NSObject, NSApplicationDelegate {
 
         if !cli.noGraphics {
             let wc = VPhoneWindowController()
-            wc.showWindow(for: vm.virtualMachine)
+            wc.showWindow(for: vm.virtualMachine, consumerKeys: vm.consumerKeys)
             windowController = wc
         }
     }

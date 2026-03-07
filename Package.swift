@@ -21,6 +21,8 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("Virtualization"),
                 .linkedFramework("AppKit"),
+                .linkedFramework("IOKit"),
+                .linkedFramework("IOUSBHost"),
             ],
         ),
     ],

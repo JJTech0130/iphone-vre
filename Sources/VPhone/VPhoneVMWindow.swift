@@ -187,13 +187,34 @@ class VPhoneVMView: VZVirtualMachineView {
     }
 }
 
+// MARK: - Home button
+
+/// NSButton subclass that fires separate press/release callbacks.
+private final class HomeButton: NSButton {
+    var onPress: (() -> Void)?
+    var onRelease: (() -> Void)?
+
+    override func mouseDown(with event: NSEvent) {
+        isHighlighted = true
+        onPress?()
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        isHighlighted = false
+        onRelease?()
+    }
+}
+
 // MARK: - Window management
 
 class VPhoneWindowController {
     private var windowController: NSWindowController?
+    private var consumerKeys: ConsumerKeys?
+    private var homeButton: HomeButton?
 
     @MainActor
-    func showWindow(for vm: VZVirtualMachine) {
+    func showWindow(for vm: VZVirtualMachine, consumerKeys: ConsumerKeys? = nil) {
+        self.consumerKeys = consumerKeys
         let vmView: NSView
         if #available(macOS 16.0, *) {
             let view = VZVirtualMachineView()
@@ -223,12 +244,34 @@ class VPhoneWindowController {
         window.contentView = vmView
         window.center()
 
+        if consumerKeys != nil {
+            addHomeButton(to: window)
+        }
+
         let controller = NSWindowController(window: window)
         controller.showWindow(nil)
         self.windowController = controller
 
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @MainActor
+    private func addHomeButton(to window: NSWindow) {
+        let button = HomeButton(title: "Home", target: nil, action: nil)
+        button.bezelStyle = .rounded
+        button.controlSize = .small
+        button.onPress   = { [weak self] in
+            self?.consumerKeys?.keyDown(.acHome)
+            print("[vphone] Home button pressed") 
+        }
+        button.onRelease = { [weak self] in self?.consumerKeys?.keyUp() }
+        homeButton = button
+
+        let accessory = NSTitlebarAccessoryViewController()
+        accessory.view = button
+        accessory.layoutAttribute = .right
+        window.addTitlebarAccessoryViewController(accessory)
     }
 
     @MainActor

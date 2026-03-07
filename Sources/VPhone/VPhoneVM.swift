@@ -1,4 +1,5 @@
 import Dynamic
+import FakeUSBKeyboardLib
 import Foundation
 import Virtualization
 
@@ -23,6 +24,7 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
     }
 
     private var consoleLogFileHandle: FileHandle?
+    var consumerKeys: ConsumerKeys?
 
     @MainActor
     init(options: Options) throws {
@@ -187,6 +189,11 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
         virtualMachine = VZVirtualMachine(configuration: config)
         super.init()
         virtualMachine.delegate = self
+
+        // Synthetic USB device that will be attached via passthrough, for Home button
+        let ck = ConsumerKeys()
+        print("[vphone] Created consumer keys device (vendor=0x\(String(format: "%04x", kConsumerKeysVendorID)) product=0x\(String(format: "%04x", kConsumerKeysProductID)))")
+        consumerKeys = ck
     }
 
     // MARK: - DFU start
@@ -203,6 +210,12 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
             print("[vphone] VM started in DFU mode — connect with irecovery")
         } else {
             print("[vphone] VM started — booting normally")
+        }
+
+        if consumerKeys != nil {
+            print("[vphone] Attaching consumer keys device to guest...")
+            try consumerKeys!.start()
+            await attachConsumerKeysToGuest()
         }
     }
 
@@ -228,6 +241,40 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
 
     func stopConsoleCapture() {
         consoleLogFileHandle?.closeFile()
+        consumerKeys?.stop()
+        consumerKeys = nil
+    }
+
+
+    let kFakeKeyboardVendorID  = 0x05AC
+    let kFakeKeyboardProductID = 0x0001
+    let kConsumerKeysVendorID  = 0x05AC
+    let kConsumerKeysProductID = 0x0002
+
+    @MainActor
+    func attachFakeKeyboardToGuest() async {
+        guard let controller = virtualMachine.usbControllers.first else {
+            print("[vphone] USB passthrough: no USB controller configured")
+            return
+        }
+        try! await attachUSBDeviceToController(
+            controller,
+            vendor: kFakeKeyboardVendorID,
+            product: kFakeKeyboardProductID,
+        )
+    }
+
+    @MainActor
+    func attachConsumerKeysToGuest() async {
+        guard let controller = virtualMachine.usbControllers.first else {
+            print("[vphone] USB passthrough: no USB controller configured")
+            return
+        }
+        try! await attachUSBDeviceToController(
+            controller,
+            vendor: kConsumerKeysVendorID,
+            product: kConsumerKeysProductID,
+        )
     }
 }
 

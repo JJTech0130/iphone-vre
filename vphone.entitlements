@@ -12,5 +12,15 @@
 	<true/>
 	<key>com.apple.security.get-task-allow</key>
 	<true/>
+	<key>com.apple.developer.usb.host-controller-interface</key>
+	<true/>
+	<key>com.apple.vm.device-access</key>
+	<true/>
+	<key>com.apple.security.temporary-exception.iokit-user-client-class</key>
+	<array>
+    	<string>AppleUSBHostFrameworkDeviceClient</string>
+	</array>
+	<key>com.apple.security.device.usb</key>
+	<true/>
 </dict>
 </plist>
