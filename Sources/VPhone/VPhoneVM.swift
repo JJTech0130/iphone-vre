@@ -248,6 +248,23 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
         fakeKeyboard?.stop()
         fakeKeyboard = nil
     }
+
+
+    let kFakeKeyboardVendorID = 0x05AC
+    let kFakeKeyboardProductID = 0x0001
+
+    @MainActor
+    func attachFakeKeyboardToGuest() async {
+        guard let controller = virtualMachine.usbControllers.first else {
+            print("[vphone] USB passthrough: no USB controller configured")
+            return
+        }
+        try! await attachUSBDeviceToController(
+            controller,
+            vendor: kFakeKeyboardVendorID,
+            product: kFakeKeyboardProductID,
+        )
+    }
 }
 
 // MARK: - Errors

@@ -2,8 +2,9 @@ import AppKit
 import Foundation
 import ObjectiveC
 
-public enum VZSequoiaSwizzle {
+let noop: @convention(c) (AnyObject, Selector) -> Void = { _, _ in }
 
+public enum VZSequoiaSwizzle {
     public static func install() {
         noopCursorHide()
         noopNotifierLock()
@@ -13,8 +14,9 @@ public enum VZSequoiaSwizzle {
     // all HID devices as pointing devices, which causes the view to hide the cursor
     // HACK: swizzle all [NSCursor hide] calls (even legitimate ones...)
     private static func noopCursorHide() {
-        guard let m = class_getClassMethod(NSCursor.self, NSSelectorFromString("hide")) else { return }
-        let noop: @convention(c) (AnyObject, Selector) -> Void = { _, _ in }
+        guard let m = class_getClassMethod(NSCursor.self, NSSelectorFromString("hide")) else {
+            return
+        }
         method_setImplementation(m, unsafeBitCast(noop, to: IMP.self))
     }
 
@@ -23,13 +25,14 @@ public enum VZSequoiaSwizzle {
     // HACK: simply swizzle it to return a fake lock object
     private static func noopNotifierLock() {
         guard let cls = NSClassFromString("IOUSBHostInterestNotifier"),
-              let parentCls = NSClassFromString("NSRecursiveLock") else { return }
+            let parentCls = NSClassFromString("NSRecursiveLock")
+        else { return }
 
         for sel in [NSSelectorFromString("lock"), NSSelectorFromString("unlock")] {
-            let noop: @convention(c) (AnyObject, Selector) -> Void = { _, _ in }
             let enc = class_getInstanceMethod(parentCls, sel).flatMap { method_getTypeEncoding($0) }
             if !class_addMethod(cls, sel, unsafeBitCast(noop, to: IMP.self), enc),
-               let m = class_getInstanceMethod(cls, sel) {
+                let m = class_getInstanceMethod(cls, sel)
+            {
                 method_setImplementation(m, unsafeBitCast(noop, to: IMP.self))
             }
         }
