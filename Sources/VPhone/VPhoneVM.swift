@@ -25,7 +25,7 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
     }
 
     private var consoleLogFileHandle: FileHandle?
-    var fakeKeyboard: FakeHIDKeyboard?
+    var consumerKeys: ConsumerKeys?
 
     @MainActor
     init(options: Options) throws {
@@ -120,10 +120,10 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
 
         // Serial port (PL011 UART — always configured)
         if let serialPort = Dynamic._VZPL011SerialPortConfiguration().asObject as? VZSerialPortConfiguration {
-            // serialPort.attachment = VZFileHandleSerialPortAttachment(
-            //     fileHandleForReading: FileHandle.standardInput,
-            //     fileHandleForWriting: FileHandle.standardOutput
-            // )
+            serialPort.attachment = VZFileHandleSerialPortAttachment(
+                fileHandleForReading: FileHandle.standardInput,
+                fileHandleForWriting: FileHandle.standardOutput
+            )
         
             config.serialPorts = [serialPort]
         }
@@ -191,13 +191,10 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
         super.init()
         virtualMachine.delegate = self
 
-        if options.fakeUSBKeyboard {
-            let kbd = FakeHIDKeyboard()
-            //try kbd.start()
-            print("[vphone] Started fake USB keyboard with vendor=0x\(String(format: "%04x", kFakeKeyboardVendorID)) " +
-                  "product=0x\(String(format: "%04x", kFakeKeyboardProductID))")
-            fakeKeyboard = kbd
-        }
+        // Synthetic USB device that will be attached via passthrough, for Home button
+        let ck = ConsumerKeys()
+        print("[vphone] Created consumer keys device (vendor=0x\(String(format: "%04x", kConsumerKeysVendorID)) product=0x\(String(format: "%04x", kConsumerKeysProductID)))")
+        consumerKeys = ck
     }
 
     // MARK: - DFU start
@@ -216,10 +213,10 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
             print("[vphone] VM started — booting normally")
         }
 
-        if fakeKeyboard != nil {
-            print("[vphone] Attaching fake USB keyboard to guest...")
-            try fakeKeyboard!.start()
-            await attachFakeKeyboardToGuest()
+        if consumerKeys != nil {
+            print("[vphone] Attaching consumer keys device to guest...")
+            try consumerKeys!.start()
+            await attachConsumerKeysToGuest()
         }
     }
 
@@ -245,13 +242,15 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
 
     func stopConsoleCapture() {
         consoleLogFileHandle?.closeFile()
-        fakeKeyboard?.stop()
-        fakeKeyboard = nil
+        consumerKeys?.stop()
+        consumerKeys = nil
     }
 
 
-    let kFakeKeyboardVendorID = 0x05AC
+    let kFakeKeyboardVendorID  = 0x05AC
     let kFakeKeyboardProductID = 0x0001
+    let kConsumerKeysVendorID  = 0x05AC
+    let kConsumerKeysProductID = 0x0002
 
     @MainActor
     func attachFakeKeyboardToGuest() async {
@@ -263,6 +262,19 @@ class VPhoneVM: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
             controller,
             vendor: kFakeKeyboardVendorID,
             product: kFakeKeyboardProductID,
+        )
+    }
+
+    @MainActor
+    func attachConsumerKeysToGuest() async {
+        guard let controller = virtualMachine.usbControllers.first else {
+            print("[vphone] USB passthrough: no USB controller configured")
+            return
+        }
+        try! await attachUSBDeviceToController(
+            controller,
+            vendor: kConsumerKeysVendorID,
+            product: kConsumerKeysProductID,
         )
     }
 }

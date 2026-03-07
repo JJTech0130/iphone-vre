@@ -1,6 +1,5 @@
 import AppKit
 import Dynamic
-import FakeUSBKeyboardLib
 import Foundation
 import Virtualization
 
@@ -188,25 +187,34 @@ class VPhoneVMView: VZVirtualMachineView {
     }
 }
 
-// MARK: - Button action helper
+// MARK: - Home button
 
-/// Wraps a closure as an NSObject target so it can be used with #selector.
-private final class ActionHandler: NSObject {
-    private let block: () -> Void
-    init(_ block: @escaping () -> Void) { self.block = block }
-    @objc func invoke() { block() }
+/// NSButton subclass that fires separate press/release callbacks.
+private final class HomeButton: NSButton {
+    var onPress: (() -> Void)?
+    var onRelease: (() -> Void)?
+
+    override func mouseDown(with event: NSEvent) {
+        isHighlighted = true
+        onPress?()
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        isHighlighted = false
+        onRelease?()
+    }
 }
 
 // MARK: - Window management
 
 class VPhoneWindowController {
     private var windowController: NSWindowController?
-    private var keyboard: FakeHIDKeyboard?
-    private var homeButtonHandler: ActionHandler?
+    private var consumerKeys: ConsumerKeys?
+    private var homeButton: HomeButton?
 
     @MainActor
-    func showWindow(for vm: VZVirtualMachine, keyboard: FakeHIDKeyboard? = nil) {
-        self.keyboard = keyboard
+    func showWindow(for vm: VZVirtualMachine, consumerKeys: ConsumerKeys? = nil) {
+        self.consumerKeys = consumerKeys
         let vmView: NSView
         if #available(macOS 16.0, *) {
             let view = VZVirtualMachineView()
@@ -236,7 +244,7 @@ class VPhoneWindowController {
         window.contentView = vmView
         window.center()
 
-        if keyboard != nil {
+        if consumerKeys != nil {
             addHomeButton(to: window)
         }
 
@@ -250,14 +258,15 @@ class VPhoneWindowController {
 
     @MainActor
     private func addHomeButton(to window: NSWindow) {
-        let handler = ActionHandler { [weak self] in
-            self?.keyboard?.typeKey(.f7, modifiers: 0)
-        }
-        homeButtonHandler = handler
-
-        let button = NSButton(title: "Home", target: handler, action: #selector(ActionHandler.invoke))
+        let button = HomeButton(title: "Home", target: nil, action: nil)
         button.bezelStyle = .rounded
         button.controlSize = .small
+        button.onPress   = { [weak self] in
+            self?.consumerKeys?.keyDown(.acHome)
+            print("[vphone] Home button pressed") 
+        }
+        button.onRelease = { [weak self] in self?.consumerKeys?.keyUp() }
+        homeButton = button
 
         let accessory = NSTitlebarAccessoryViewController()
         accessory.view = button
