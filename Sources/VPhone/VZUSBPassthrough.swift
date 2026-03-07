@@ -18,7 +18,9 @@ func attachUSBDeviceToController(
     product: Int,
 ) async throws {
     // Patch buggy VZIOUSBHostPassthroughDevice behavior on Sequoia
-    VZSequoiaSwizzle.install()
+    if #available(macOS 15, *), ProcessInfo.processInfo.operatingSystemVersion.majorVersion == 15 {
+        VZSequoiaSwizzle.install()
+    }
 
     let label = String(format: "vendor=0x%04x product=0x%04x", vendor, product)
 
